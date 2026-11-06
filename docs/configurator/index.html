@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cuefs · 配置生成器</title>
+<style>
+  :root{--bg:#0f1518;--panel:#16202456;--fg:#e8f2ee;--muted:#8fa9a2;--acc:#4fd1a5;--line:#25343a;}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#12332c,#0f1518 60%);color:var(--fg);
+       font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif}
+  header{padding:28px 24px 8px;max-width:1100px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:.5px}
+  h1 span{color:var(--acc)}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+  main{max-width:1100px;margin:0 auto;padding:0 24px 60px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  section h2{font-size:15px;margin:0 0 12px;color:var(--acc);font-weight:600;letter-spacing:.3px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input[type=text],input[type=number],select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);
+       background:#0c1215;color:var(--fg);font:14px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--fg);margin:8px 0}
+  pre{background:#0a0f11;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;
+      font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfe9e0;white-space:pre}
+  .out{grid-column:1/-1}
+  .out h2{margin-top:0}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tabs button{background:#0c1215;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:999px;
+      cursor:pointer;font-size:13px}
+  .tabs button.on{color:#08120e;background:var(--acc);border-color:var(--acc);font-weight:600}
+  .copy{float:right;background:#0c1215;border:1px solid var(--line);color:var(--muted);border-radius:8px;
+      padding:4px 10px;cursor:pointer;font-size:12px}
+  .copy:hover{color:var(--acc);border-color:var(--acc)}
+  .warn{border-left:3px solid #e0a23c;background:#2a2110;color:#f0d9a8;padding:8px 12px;border-radius:8px;font-size:13px;margin:10px 0}
+  .hint{color:var(--muted);font-size:12.5px;margin-top:6px}
+  footer{max-width:1100px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:12.5px}
+  code.k{background:#0a0f11;padding:1px 5px;border-radius:5px;color:#9fe6c8;font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>cuefs <span>配置生成器</span></h1>
+  <p class="sub">选一选，直接生成你的 <code class="k">docker run</code> / <code class="k">docker-compose.yml</code>、安装步骤、Jellyfin 挂载和卸载命令。纯前端，不上传任何东西。</p>
+</header>
+
+<main>
+  <section>
+    <h2>1. 选镜像</h2>
+    <label>版本</label>
+    <select id="image">
+      <option value="cuefs:latest">完整版 cuefs:latest —— 可解 TAK（amd64，1.53 GB）</option>
+      <option value="cuefs:slim">精简版 cuefs:slim —— 无 TAK，支持 arm64（408 MB）</option>
+    </select>
+    <div id="takWarn" class="warn">完整版镜像<b>不自带</b> TAK 解码库：装好后需要你自己下载 tak233.zip 并导入（个人/非商业用途）。</div>
+
+    <label>目录 A（只读，你的整盘 CUE/TAK 所在）</label>
+    <input type="text" id="src" value="/mnt/music-src">
+
+    <label>目录 B（可写，Jellyfin 写的 NFO/封面落这里）</label>
+    <input type="text" id="overlay" value="/mnt/music-overlay">
+
+    <label>缓存方式</label>
+    <select id="cacheMode">
+      <option value="volume">命名卷 cuefs-cache（推荐）</option>
+      <option value="host">宿主机目录（便于观察/清理）</option>
+      <option value="tmpfs">内存 tmpfs（重启即清空，零落盘）</option>
+    </select>
+    <div id="cacheHost" style="display:none">
+      <label>缓存目录</label>
+      <input type="text" id="cachePath" value="/var/cache/cuefs">
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 运行参数</h2>
+    <div class="row">
+      <div><label>宿主机端口</label><input type="number" id="port" value="8099"></div>
+      <div><label>并发解码 workers</label><input type="number" id="workers" value="3"></div>
+    </div>
+    <div class="row">
+      <div><label>缓存 TTL（小时，0=永久）</label><input type="number" id="ttl" value="24"></div>
+      <div><label>缓存上限（GB，0=不限）</label><input type="number" id="maxgb" value="2"></div>
+    </div>
+    <label>封面/歌词/NFO 读取位置</label>
+    <select id="sidecar">
+      <option value="both">both —— B 优先，A 兜底（默认）</option>
+      <option value="src">src —— 以原盘目录为准</option>
+      <option value="overlay">overlay —— 只看目录 B</option>
+    </select>
+    <label>pregap 归属</label>
+    <select id="pregap">
+      <option value="prev">prev —— 归上一轨（默认，逐轨拼接=整盘）</option>
+      <option value="next">next —— 归下一轨开头</option>
+    </select>
+    <div class="chk"><input type="checkbox" id="authOn"><label for="authOn" style="margin:0">启用 Basic 认证</label></div>
+    <div id="authBox" style="display:none">
+      <div class="row">
+        <div><label>用户名</label><input type="text" id="user" value="alice"></div>
+        <div><label>密码</label><input type="text" id="pass" value="s3cret"></div>
+      </div>
+    </div>
+    <div class="chk"><input type="checkbox" id="lan"><label for="lan" style="margin:0">允许局域网访问（默认只听 127.0.0.1）</label></div>
+    <div class="hint">不开这个选项时，端口会绑成 <code class="k">127.0.0.1:端口:8099</code>，只有本机能连。</div>
+  </section>
+
+  <section class="out">
+    <h2>3. 复制走</h2>
+    <div class="tabs">
+      <button data-tab="run" class="on">docker run</button>
+      <button data-tab="compose">docker-compose</button>
+      <button data-tab="steps">安装步骤</button>
+      <button data-tab="jellyfin">Jellyfin</button>
+      <button data-tab="ops">更新 / 卸载</button>
+    </div>
+    <pre id="out">…</pre>
+    <button class="copy" id="copy">复制</button>
+  </section>
+</main>
+
+<footer>
+  生成的命令只是模板：路径、端口、认证请按自己环境改。许可证与安全说明见
+  <code class="k">docs/02-TAK-LICENSE.md</code> 与 <code class="k">docs/10-SECURITY.md</code>。
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const tabBtns = [...document.querySelectorAll('.tabs button')];
+let tab = 'run';
+
+function cfg(){
+  const img = $('image').value;
+  const full = img.endsWith('latest');
+  const bind = $('lan').checked ? `${$('port').value}:8099` : `127.0.0.1:${$('port').value}:8099`;
+  const cacheMode = $('cacheMode').value;
+  let cacheArg, cacheVol = '';
+  if(cacheMode === 'volume'){ cacheArg = '-v cuefs-cache:/cache'; cacheVol = 'cuefs-cache'; }
+  else if(cacheMode === 'host'){ cacheArg = `-v ${$('cachePath').value}:/cache`; }
+  else { cacheArg = '--tmpfs /cache:size=512m'; }
+  const env = [];
+  env.push(['CUEFS_PREGAP', $('pregap').value]);
+  env.push(['CUEFS_CACHE_TTL', String($('ttl').value)]);
+  env.push(['CUEFS_CACHE_MAX_GB', String($('maxgb').value)]);
+  env.push(['CUEFS_WORKERS', String($('workers').value)]);
+  env.push(['CUEFS_SIDECAR', $('sidecar').value]);
+  if(!full) env.push(['CUEFS_BACKEND','ffmpeg']);
+  if($('authOn').checked) env.push(['CUEFS_AUTH', `${$('user').value}:${$('pass').value}`]);
+  return {img, full, bind, cacheArg, cacheVol, env, src:$('src').value, overlay:$('overlay').value,
+          port:$('port').value, cacheMode, cachePath:$('cachePath').value};
+}
+
+function q(v){
+  v = String(v);
+  return /^[\w.:@\/,-]+$/.test(v) ? v : "'" + v.replace(/'/g, "'\\''") + "'";
+}
+
+function runCmd(){
+  const c = cfg();
+  const envs = c.env.map(([k,v]) => `  -e ${k}=${q(v)}`).join(' \\\n');
+  return `docker run -d --name cuefs --restart unless-stopped \\
+  -p ${c.bind} \\
+  -v ${q(c.src)}:/music-src:ro \\
+  -v ${q(c.overlay)}:/music-overlay \\
+  ${c.cacheArg} \\
+${envs} \\
+  ${c.img}`;
+}
+
+function compose(){
+  const c = cfg();
+  const envs = c.env.map(([k,v]) => `      ${k}: "${v}"`).join('\n');
+  const vol = c.cacheVol ? `\nvolumes:\n  ${c.cacheVol}:` : '';
+  const cacheLine = c.cacheMode === 'tmpfs'
+    ? '      - type: tmpfs\n        target: /cache\n        tmpfs:\n          size: 536870912'
+    : `      - ${c.cacheMode === 'volume' ? c.cacheVol : c.cachePath}:/cache`;
+  const volumesBlock = `    volumes:\n      - ${c.src}:/music-src:ro\n      - ${c.overlay}:/music-overlay\n${cacheLine}`;
+  return `services:
+  cuefs:
+    image: ${c.img}
+    container_name: cuefs
+    restart: unless-stopped
+    ports:
+      - "${c.bind}"
+    environment:
+${envs}
+${volumesBlock}${vol}`;
+}
+
+function steps(){
+  const c = cfg();
+  const s = [];
+  s.push('# 1) 拉镜像');
+  s.push(`docker pull ${c.img}`);
+  s.push('');
+  s.push('# 2) 起服务');
+  s.push(runCmd());
+  s.push('');
+  if(c.full){
+    s.push('# 3) 导入 TAK 解码库（完整版必做；从 https://www.tak-audio.com/ 下 tak233.zip）');
+    s.push('sha256sum tak233.zip   # 40d26992266f1377d576b88b84b88d2ab256dc321e47f90314402a80692aba6a');
+    s.push('docker exec -i cuefs python3 /app/import_tak.py --accept-license - < tak233.zip');
+    s.push('docker exec cuefs python3 /app/import_tak.py --status');
+    s.push('');
+  } else {
+    s.push('# 3) 精简版不需要 TAK 库（也不支持 TAK）');
+    s.push('');
+  }
+  s.push('# 4) 自检');
+  s.push(`curl -s http://127.0.0.1:${c.port}/ | head -c 300`);
+  s.push(`bash tools/smoke_test.sh http://127.0.0.1:${c.port} cuefs`);
+  return s.join('\n');
+}
+
+function jellyfin(){
+  const c = cfg();
+  const auth = $('authOn').checked
+    ? ` user=${$('user').value} pass=$(rclone obscure '${$('pass').value}')`
+    : '';
+  return `# A. 宿主机上挂 rclone（推荐）
+mkdir -p /mnt/jellyfin-cuefs
+rclone config create cuefs webdav url=http://127.0.0.1:${c.port}/ vendor=other${auth} --non-interactive
+rclone mount cuefs: /mnt/jellyfin-cuefs --allow-other --vfs-cache-mode off --dir-cache-time 10m --daemon
+
+# B. 或者 davfs2
+# mount -t davfs http://127.0.0.1:${c.port}/ /mnt/jellyfin-cuefs
+
+# C. 或者一次性导出成真实 FLAC（零依赖，多占 ~1 倍空间）
+# docker run --rm -v ${c.src}:/music-src:ro -v /mnt/export:/export ${c.img} --export /export
+
+# Jellyfin 侧：
+#   控制台 → 媒体库 → 添加 → 音乐 → 文件夹 /mnt/jellyfin-cuefs
+#   取消勾选「启用实时监控」
+#   Jellyfin 跑在容器里时，要额外 -v /mnt/jellyfin-cuefs:/takcuefs:ro 并在库里填 /takcuefs
+#   （注意：先挂 rclone 再启动容器，否则 rprivate 传播会让容器里看到空目录）`;
+}
+
+function ops(){
+  const c = cfg();
+  return `# 更新
+docker pull ${c.img}
+docker rm -f cuefs
+${runCmd()}
+${c.full ? '# 换容器后 TAK 库要重导（除非把 /opt/tak 挂成了卷）\ndocker exec -i cuefs python3 /app/import_tak.py --accept-license - < tak233.zip' : ''}
+
+# 备份（只需要目录 B；缓存不用备）
+tar czf cuefs-overlay-$(date +%F).tgz -C ${c.overlay} .
+
+# 卸载
+docker rm -f cuefs
+docker rmi ${c.img}
+${c.cacheVol ? `docker volume rm ${c.cacheVol}` : ''}
+rm -rf ${c.overlay}   # 确认里面没有想留的 NFO/封面再删`;
+}
+
+function render(){
+  const map = {run: runCmd, compose, steps, jellyfin, ops};
+  $('out').textContent = map[tab]();
+}
+
+document.querySelectorAll('input,select').forEach(el => el.addEventListener('input', render));
+tabBtns.forEach(b => b.addEventListener('click', () => {
+  tabBtns.forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); tab = b.dataset.tab; render();
+}));
+$('image').addEventListener('change', () => {
+  $('takWarn').style.display = $('image').value.endsWith('latest') ? '' : 'none';
+  render();
+});
+$('cacheMode').addEventListener('change', () => {
+  $('cacheHost').style.display = $('cacheMode').value === 'host' ? '' : 'none';
+  render();
+});
+$('authOn').addEventListener('change', () => {
+  $('authBox').style.display = $('authOn').checked ? '' : 'none';
+  render();
+});
+$('copy').addEventListener('click', async () => {
+  try{ await navigator.clipboard.writeText($('out').textContent);
+       $('copy').textContent = '已复制'; setTimeout(()=>$('copy').textContent='复制', 1200); }
+  catch(e){ $('copy').textContent = '复制失败'; }
+});
+render();
+</script>
+</body>
+</html>

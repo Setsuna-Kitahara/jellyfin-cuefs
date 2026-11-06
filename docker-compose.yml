@@ -1,0 +1,24 @@
+# cuefs 完整版（含 Wine，可解 TAK）
+services:
+  cuefs:
+    image: cuefs:latest
+    container_name: cuefs
+    restart: unless-stopped
+    # 只绑在本机回环：宿主机之外的机器连不上；需要给别的机器用时再改或走反向代理
+    ports:
+      - "127.0.0.1:8099:8099"
+    environment:
+      CUEFS_BACKEND: auto
+      CUEFS_PREGAP: prev
+      CUEFS_TAK_MODE: range
+      CUEFS_SIDECAR: both
+      CUEFS_CACHE_TTL: "24"      # 缓存 24 小时后过期，0 = 永不过期
+      CUEFS_CACHE_MAX_GB: "2"    # 或者超过 2 GB 就按 LRU 删
+      CUEFS_WORKERS: "3"
+      # CUEFS_AUTH: "user:password"   # 可选：Basic 认证
+    volumes:
+      - ${CUE_SRC:-./test/src}:/music-src:ro
+      - ${CUE_OVERLAY:-./test/overlay}:/music-overlay
+      - cuefs-cache:/cache
+volumes:
+  cuefs-cache:

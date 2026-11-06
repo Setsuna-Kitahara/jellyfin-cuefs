@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<album>
+  <title>Public Domain Sampler</title>
+  <artist>Monplaisir / Komiku</artist>
+  <albumartist>Monplaisir / Komiku</albumartist>
+  <year>2026</year>
+  <premiered>2026-11-06</premiered>
+  <releasedate>2026-11-06</releasedate>
+  <genre>Test</genre>
+  <label>Library of Congress — Citizen DJ / Free Music Archive</label>
+  <catalognumber>PD-SAMPLE-001</catalognumber>
+  <type>Album</type>
+  <review>SAMPLE ALBUM for cuefs testing. Public-domain audio (CC0 dedication) from the Library of Congress Citizen DJ / Free Music Archive subset: "A Good Start" by Monplaisir, "Beach" and "Home" by Komiku, "Free To Use 9" by Monplaisir. Sources: https://citizen-dj.labs.loc.gov/items/loc-fma/fma-182157/ | https://citizen-dj.labs.loc.gov/items/loc-fma/fma-178536/ | https://citizen-dj.labs.loc.gov/items/loc-fma/fma-178534/ | https://citizen-dj.labs.loc.gov/items/loc-fma/fma-152618/</review>
+  <outline>Not a real release — SAMPLE ONLY.</outline>
+  <lockdata>false</lockdata>
+</album>

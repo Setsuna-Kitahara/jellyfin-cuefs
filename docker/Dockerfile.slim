@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1
+# cuefs 精简版（slim）：不带 Wine、不带 TAK 解码库，只靠 ffmpeg。
+# 支持的「整盘 + CUE」：FLAC / WavPack / TTA / ALAC / AIFF / WAV / APE / MPC / Shorten（ffmpeg 能解的都行）。
+# 不支持 TAK —— TAK 必须用官方闭源解码库（Windows x86-64），没 Wine 跑不了。
+# 这个镜像可以跨架构（amd64 / arm64）。
+FROM debian:trixie-slim
+
+ARG http_proxy
+ARG https_proxy
+ARG TARGETARCH=amd64
+ARG APT_MIRROR=
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    CUEFS_BACKEND=ffmpeg \
+    CUEFS_SRC=/music-src \
+    CUEFS_OVERLAY=/music-overlay \
+    CUEFS_CACHE=/cache
+
+RUN set -eux; \
+    if [ -n "$APT_MIRROR" ]; then \
+      sed -i "s|deb.debian.org|$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
+      sed -i "s|deb.debian.org|$APT_MIRROR|g" /etc/apt/sources.list 2>/dev/null || true; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends python3 ca-certificates curl xz-utils; \
+    case "$TARGETARCH" in \
+      amd64) A=amd64 ;; \
+      arm64) A=arm64 ;; \
+      *) echo "unsupported arch: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$A-static.tar.xz" -o /tmp/ff.tar.xz; \
+    mkdir -p /tmp/ff; tar -xJf /tmp/ff.tar.xz -C /tmp/ff --strip-components=1; \
+    install -m 0755 /tmp/ff/ffmpeg /usr/local/bin/ffmpeg; \
+    install -m 0755 /tmp/ff/ffprobe /usr/local/bin/ffprobe; \
+    ffmpeg -hide_banner -version | head -1; \
+    rm -rf /tmp/ff /tmp/ff.tar.xz /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
+           /var/cache/apt/* /var/lib/apt/lists/*; \
+    mkdir -p /music-src /music-overlay /cache
+
+COPY app/ /app/
+COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/doc/cuefs/
+
+EXPOSE 8099
+VOLUME ["/cache"]
+ENTRYPOINT ["python3", "-u", "/app/cuefs.py"]
+CMD ["--src", "/music-src", "--overlay", "/music-overlay", "--cache", "/cache", \
+     "--host", "0.0.0.0", "--port", "8099"]

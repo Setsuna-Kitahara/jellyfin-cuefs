@@ -1,0 +1,21 @@
+# 用仓库自带的公有领域示例专辑跑一遍（见 docs/08-SAMPLE-TEST.md）
+# 用法： docker compose -f docker-compose.sample.yml up -d
+# 注意：tak233.zip 不在仓库里（许可证原因），导入步骤见 docs/02-TAK-LICENSE.md
+services:
+  cuefs:
+    image: cuefs:latest
+    container_name: cuefs-sample
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8099:8099"
+    environment:
+      CUEFS_PREGAP: prev
+      CUEFS_TAK_MODE: range
+      CUEFS_CACHE_TTL: "24"
+      CUEFS_CACHE_MAX_GB: "1"
+    volumes:
+      - ./sample/sample-disc:/music-src:ro
+      - ./sample/overlay:/music-overlay
+      - cuefs-sample-cache:/cache
+volumes:
+  cuefs-sample-cache:

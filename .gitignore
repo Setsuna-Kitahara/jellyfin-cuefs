@@ -1,0 +1,30 @@
+# 构建产物 / 私有文件，不要提交
+tak233.zip
+vendor/*.zip
+vendor/*.7z
+*.tar
+*.tar.gz
+*.tar.xz
+*.7z
+
+# 测试素材（第三方音乐版权，绝不入库）
+test/
+*.tak
+*.cue
+*.flac
+*.wav
+
+# 例外：example album 是公有领域（CC0）素材，随仓库提供以便直接冒烟测试
+!sample/sample-disc/*.tak
+!sample/sample-disc/*.cue
+
+# 本地镜像与构建缓存
+.docker-cfg/
+image/
+__pycache__/
+*.pyc
+
+# 运行产物
+cache/
+overlay/
+export/

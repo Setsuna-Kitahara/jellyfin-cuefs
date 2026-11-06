@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: python syntax
+        run: python -m py_compile app/cuefs.py app/taklib.py app/takdec.py app/import_tak.py tools/verify_container.py sample/build_sample.py
+      - name: shell syntax
+        run: bash -n tools/smoke_test.sh
+      - name: cue parser unit check
+        run: |
+          python - <<'PY'
+          import sys; sys.path.insert(0, 'app')
+          import cuefs
+          # INDEX 00/01 -> 帧精确
+          assert cuefs.cue_time(0) == '00:00:00'
+          assert cuefs.cue_time(4578) == '01:01:03'   # 1:01.04 -> mm:ss:ff
+          # 路径安全化
+          assert '/' not in cuefs.safe_name('a/b:c*?')
+          print('ok')
+          PY
+
+  build-slim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build slim image
+        run: docker build -f docker/Dockerfile.slim -t cuefs:ci-slim .
+      - name: make a tiny FLAC + CUE fixture
+        run: |
+          mkdir -p /tmp/m/src /tmp/m/overlay
+          docker run --rm -v /tmp/m/src:/out --entrypoint bash cuefs:ci-slim -c '
+            ffmpeg -v error -f lavfi -i "sine=frequency=440:duration=3" \
+                   -f lavfi -i "sine=frequency=660:duration=4" \
+                   -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1" \
+                   -ac 2 -ar 44100 -c:a flac "/out/disc.flac" &&
+            printf "FILE \"disc.flac\" WAVE\n  TRACK 01 AUDIO\n    TITLE \"A\"\n    PERFORMER \"ci\"\n    INDEX 01 00:00:00\n  TRACK 02 AUDIO\n    TITLE \"B\"\n    PERFORMER \"ci\"\n    INDEX 01 00:03:00\n" > /out/disc.cue
+          '
+          ls -l /tmp/m/src
+
+      - name: run cuefs (ffmpeg backend)
+        run: |
+          docker run -d --name cuefs -p 127.0.0.1:8099:8099 \
+            -v /tmp/m/src:/music-src:ro -v /tmp/m/overlay:/music-overlay \
+            -e CUEFS_BACKEND=ffmpeg cuefs:ci-slim
+          sleep 3
+          curl -fsS http://127.0.0.1:8099/ | head -c 400
+      - name: smoke test
+        run: bash tools/smoke_test.sh http://127.0.0.1:8099 cuefs
+      - name: logs on failure
+        if: failure()
+        run: docker logs cuefs || true

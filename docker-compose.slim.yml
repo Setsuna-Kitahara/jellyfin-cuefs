@@ -1,0 +1,20 @@
+# cuefs 精简版（无 Wine / 无 TAK；支持 FLAC/WV/TTA/ALAC/AIFF/WAV/APE 等整盘+CUE）
+services:
+  cuefs:
+    image: cuefs:slim
+    container_name: cuefs
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8099:8099"
+    environment:
+      CUEFS_BACKEND: ffmpeg
+      CUEFS_PREGAP: prev
+      CUEFS_SIDECAR: both
+      CUEFS_CACHE_TTL: "24"
+      CUEFS_CACHE_MAX_GB: "2"
+    volumes:
+      - ${CUE_SRC:-./test/src}:/music-src:ro
+      - ${CUE_OVERLAY:-./test/overlay}:/music-overlay
+      - cuefs-cache:/cache
+volumes:
+  cuefs-cache:

@@ -1,0 +1,27 @@
+{
+  "album": {
+    "label": "Library of Congress — Citizen DJ / Free Music Archive",
+    "catalognumber": "PD-SAMPLE-001",
+    "comment": "SAMPLE — public domain (CC0) audio; see CREDITS.md",
+    "copyright": "Public Domain (CC0 dedication)",
+    "genre": "Test"
+  },
+  "tracks": {
+    "1": {
+      "composer": "Monplaisir",
+      "comment": "https://citizen-dj.labs.loc.gov/items/loc-fma/fma-182157/"
+    },
+    "2": {
+      "composer": "Komiku",
+      "comment": "https://citizen-dj.labs.loc.gov/items/loc-fma/fma-178536/"
+    },
+    "3": {
+      "composer": "Komiku",
+      "comment": "https://citizen-dj.labs.loc.gov/items/loc-fma/fma-178534/"
+    },
+    "4": {
+      "composer": "Monplaisir",
+      "comment": "https://citizen-dj.labs.loc.gov/items/loc-fma/fma-152618/"
+    }
+  }
+}
