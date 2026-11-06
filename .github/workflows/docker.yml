@@ -97,8 +97,10 @@ jobs:
           ALIAS: ${{ matrix.alias }}
         run: |
           set -e
-          tags="ghcr.io/${{ github.repository_owner }}/cuefs:${VER}${SUFFIX}"
-          tags="$tags,ghcr.io/${{ github.repository_owner }}/cuefs:${ALIAS}"
+          # GHCR 的镜像路径必须全小写，GitHub 用户名允许大写，这里统一转一次
+          OWNER="$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          tags="ghcr.io/${OWNER}/cuefs:${VER}${SUFFIX}"
+          tags="$tags,ghcr.io/${OWNER}/cuefs:${ALIAS}"
           if [ -n "$DOCKERHUB_USER" ]; then
             tags="$tags,docker.io/${DOCKERHUB_USER}/cuefs:${VER}${SUFFIX}"
             tags="$tags,docker.io/${DOCKERHUB_USER}/cuefs:${ALIAS}"
@@ -109,7 +111,7 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
           echo "$tags" | tr ',' '\n'
 
-      - name: build${{ inputs.push == false && ' (不推送)' || ' and push' }}
+      - name: build image
         uses: docker/build-push-action@v6
         with:
           context: .
