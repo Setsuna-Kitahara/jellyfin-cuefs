@@ -11,6 +11,10 @@
 - 原盘目录 **只读**；Jellyfin 想写 NFO / 封面时，**重定向**到另一个可写目录（overlay）。
 - 支持 **TAK**（需要官方的闭源解码库 + Wine），也支持 **FLAC / WavPack / TTA / ALAC / AIFF / WAV / APE / MPC / Shorten** 等 ffmpeg 能解的整盘格式。
 - 两个镜像：`cuefs:latest`（完整版，含 Wine，可解 TAK，**amd64**）和 `cuefs:slim`（精简版，408 MB，**amd64 + arm64**）。
+- **在线文档**（每次改 `docs/` 由 GitHub Actions 自动渲染后发布）：
+  <https://setsuna-kitahara.github.io/jellyfin-cuefs/> ·
+  配置生成器 <https://setsuna-kitahara.github.io/jellyfin-cuefs/configurator.html>
+- **镜像**：`ghcr.io/setsuna-kitahara/cuefs:latest` / `:slim`（打 `v*` 标签时自动构建推送，见 [PUBLISH.md](PUBLISH.md)）
 
 > 英文简介：cuefs exposes "disc image + CUE" albums (TAK, FLAC, WavPack, TTA, ALAC, AIFF, WAV, APE…) as a
 > read-only WebDAV tree of virtual tracks, so Jellyfin can index and stream them **without transcoding

@@ -14,9 +14,17 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - name: python syntax
-        run: python -m py_compile app/cuefs.py app/taklib.py app/takdec.py app/import_tak.py tools/verify_container.py sample/build_sample.py
+        run: python -m py_compile app/cuefs.py app/taklib.py app/takdec.py app/import_tak.py tools/verify_container.py tools/build_docs_site.py tools/md2html.py sample/build_sample.py
       - name: shell syntax
         run: bash -n tools/smoke_test.sh
+      - name: docs site renders
+        run: |
+          python tools/build_docs_site.py _site
+          test -s _site/index.html
+          test -s _site/configurator.html
+          test -s _site/14-NAMING.html
+          echo "站点页数: $(ls _site/*.html | wc -l)"
+
       - name: cue parser unit check
         run: |
           python - <<'PY'

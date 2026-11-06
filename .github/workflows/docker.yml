@@ -1,0 +1,132 @@
+name: docker
+
+# 按 Makefile 的定义构建两个镜像变体，并推到镜像仓库：
+#   full  docker/Dockerfile       linux/amd64（带 Wine，可解 TAK）→ <ver>, latest
+#   slim  docker/Dockerfile.slim  linux/amd64 + linux/arm64        → <ver>-slim, slim
+#
+# 推送目标：
+#   ghcr.io/<owner>/cuefs      —— 用自带的 GITHUB_TOKEN，开箱即用，不需要任何 secret
+#   docker.io/<用户>/cuefs     —— 需要仓库 secret：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN
+#                                  （没配就只推 ghcr，不会报错）
+#
+# 触发：推 v* 标签，或手动 workflow_dispatch。
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '镜像版本号（留空 = 用标签里的版本，或 Makefile 的 VERSION）'
+        required: false
+      push:
+        description: '真正推送（取消勾选 = 只构建验证，不推）'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          set -e
+          if [ -n "${{ inputs.version }}" ]; then
+            V="${{ inputs.version }}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="$(sed -n 's/^VERSION[[:space:]]*?*=[[:space:]]*//p' Makefile | head -1)"
+          fi
+          echo "版本号: $V"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: full
+            file: docker/Dockerfile
+            platforms: linux/amd64
+            suffix: ''
+            alias: latest
+          - flavor: slim
+            file: docker/Dockerfile.slim
+            platforms: linux/amd64,linux/arm64
+            suffix: '-slim'
+            alias: slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: log in to docker hub
+        if: env.DOCKERHUB_USER != '' && env.DOCKERHUB_TOKEN != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      - name: work out image tags
+        id: tags
+        env:
+          VER: ${{ needs.meta.outputs.version }}
+          SUFFIX: ${{ matrix.suffix }}
+          ALIAS: ${{ matrix.alias }}
+        run: |
+          set -e
+          tags="ghcr.io/${{ github.repository_owner }}/cuefs:${VER}${SUFFIX}"
+          tags="$tags,ghcr.io/${{ github.repository_owner }}/cuefs:${ALIAS}"
+          if [ -n "$DOCKERHUB_USER" ]; then
+            tags="$tags,docker.io/${DOCKERHUB_USER}/cuefs:${VER}${SUFFIX}"
+            tags="$tags,docker.io/${DOCKERHUB_USER}/cuefs:${ALIAS}"
+            echo "docker hub 已配置：$DOCKERHUB_USER"
+          else
+            echo "未配置 DOCKERHUB_USERNAME，只推 ghcr.io"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "$tags" | tr ',' '\n'
+
+      - name: build${{ inputs.push == false && ' (不推送)' || ' and push' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platforms }}
+          push: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.flavor }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.flavor }}
+
+      - name: summary
+        run: |
+          {
+            echo "### ${{ matrix.flavor }}"
+            echo ""
+            echo "- Dockerfile: \`${{ matrix.file }}\`"
+            echo "- 平台: ${{ matrix.platforms }}"
+            echo "- 标签:"
+            echo '${{ steps.tags.outputs.tags }}' | tr ',' '\n' | sed 's/^/  - /'
+          } >> "$GITHUB_STEP_SUMMARY"

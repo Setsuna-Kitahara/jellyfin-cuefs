@@ -25,6 +25,7 @@ __pycache__/
 *.pyc
 
 # 运行产物
+_site/
 cache/
 overlay/
 export/

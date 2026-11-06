@@ -1,0 +1,56 @@
+name: pages
+
+# 把 README + docs/ 渲染成静态站点，发布到 GitHub Pages：
+#   https://<owner>.github.io/jellyfin-cuefs/
+#   https://<owner>.github.io/jellyfin-cuefs/configurator.html   ← 配置生成器
+# 渲染器是仓库自带的 tools/build_docs_site.py（纯标准库，不装任何依赖）。
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'sample/cover.jpg'
+      - 'tools/build_docs_site.py'
+      - 'tools/md2html.py'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: render site
+        run: |
+          python tools/build_docs_site.py _site
+          ls -l _site | head -25
+          test -s _site/index.html
+          test -s _site/configurator.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
