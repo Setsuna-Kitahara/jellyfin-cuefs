@@ -35,25 +35,53 @@ cuefs 的思路反过来：**原盘一个字节都不动**，只在有人播放�
 
 ## 30 秒看懂它长什么样
 
+用仓库自带的**公有领域**示例盘举例（下面所有例子都用它，可以直接跑）：
+
 ```
 /mnt/music-src/                     ← 目录 A（只读）：你自己的整盘
-  ef - a tale of memories/
-    GNCA-1135.tak
-    GNCA-1135.cue
-  ...
+  sample-disc/
+    sample-disc.tak                 ← 4 首曲子的整盘镜像
+    sample-disc.cue                 ← 分轨表（专辑名和曲名都写在这里）
 
 http://127.0.0.1:8099/              ← cuefs 输出的 WebDAV
-  ef - a tale of memories. ORIGINAL SOUNDTRACK ～espressivo～/
-    01 - Overture.flac              ← 虚拟文件，播放时才生成
-    02 - ebullient future.flac
-    ...
+  Public Domain Sampler/            ← 专辑名，来自 CUE 里的 TITLE
+    01 - A Good Start.flac          ← 虚拟文件，播放时才生成
+    02 - Beach.flac
+    03 - Home.flac
+    04 - Free To Use 9.flac
     cover.jpg                       ← 侧车：A 或 B 里的封面
     album.nfo
 
 /mnt/music-overlay/                 ← 目录 B（可写）：Jellyfin 写的东西落这里
-  ef - a tale of memories. ORIGINAL SOUNDTRACK ～espressivo～/
+  Public Domain Sampler/
     album.nfo                       ← Jellyfin 自己补全的元数据
 ```
+
+## 媒体库里的专辑名从哪来
+
+这是最容易踩的一处：**Jellyfin 里的专辑名和曲目名，来自 CUE 里写的 `TITLE`，不是目录名拼出来的。**
+
+```cue
+PERFORMER "Monplaisir / Komiku"
+TITLE "Public Domain Sampler"       ← 专辑名就是这一行
+FILE "sample-disc.tak" WAVE
+
+  TRACK 01 AUDIO
+    TITLE "A Good Start"            ← 曲目名是 "01 - A Good Start.flac"
+    PERFORMER "Monplaisir"
+    INDEX 01 00:00:00
+```
+
+规则只有三条：
+
+1. **专辑名** = CUE 顶层的 `TITLE`；WebDAV 里的**目录名**是它清洗掉 `\ / : * ? " < > |` 之后的版本，
+   写进 FLAC 的 `album` 标签的是**原文** —— 所以「目录名」和「Jellyfin 里显示的名字」可以不一样。
+2. **曲目名** = `NN - 曲名.flac`，`NN` 是 CUE 的 `TRACK` 号（补零两位），曲名是该轨的 `TITLE`。
+3. **两张盘 TITLE 完全相同时**：文件系统层 cuefs 会自动加 4 位哈希区分（两张都留得住），
+   但 Jellyfin 认的是 `album` + `album_artist` 标签，**可能把它们并成一张专辑**。
+
+想改名字、多碟怎么排、中文/日文 CUE 的编码、重名的完整规则：见
+**[docs/14-NAMING.md](docs/14-NAMING.md)**。
 
 ## 快速开始
 
@@ -135,7 +163,7 @@ docker compose -f docker-compose.sample.yml up -d   # 或按 docs/08-SAMPLE-TEST
 curl -s http://127.0.0.1:8099/ | head
 ```
 
-预期：看到 1 张专辑 / 4 轨；`curl` 某一轨能拿到 `200`，`Range` 请求回 `206`。
+预期：看到 1 张专辑 `Public Domain Sampler` / 4 轨；`curl` 某一轨能拿到 `200`，`Range` 请求回 `206`。
 逐项步骤与预期数字见 [docs/08-SAMPLE-TEST.md](docs/08-SAMPLE-TEST.md)。
 
 ## 文档
@@ -156,11 +184,66 @@ curl -s http://127.0.0.1:8099/ | head
 | [docs/11-METADATA.md](docs/11-METADATA.md) | NFO 能补什么、补不了什么、meta.json |
 | [docs/12-OPS.md](docs/12-OPS.md) | 更新、卸载、备份、排错表 |
 | [docs/13-FAQ.md](docs/13-FAQ.md) | 常见问题 |
+| [docs/14-NAMING.md](docs/14-NAMING.md) | **媒体库里的专辑名与曲目名怎么来的** |
 
-## 许可
+## 开放源代码许可
 
-- 本仓库自有代码：**MIT**（见 [LICENSE](LICENSE)）—— 作者 **setsuna-kitahara & DeepSeek**。
-- **不包含** TAK 解码库：Thomas Becker 的 freeware，仅限私人/非商业使用，分发须保持原包完整；
-  镜像里只放导入脚本，由使用者自行下载并同意其条款（[docs/02-TAK-LICENSE.md](docs/02-TAK-LICENSE.md)）。
-- 镜像内的 Wine / Python / ffmpeg 各自的许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-- 示例音频来自 Library of Congress「Citizen DJ / FMA」公有领域子集，署名见 [sample/CREDITS.md](sample/CREDITS.md)。
+本仓库**自有代码**用 MIT；但一套「整盘镜像 → Jellyfin」的链路会牵扯不少第三方组件，
+这里把它们**全部**列清楚，逐条写明许可、用途、是否随本仓库/镜像分发。
+完整清单（含每个 DLL 的来源与再分发条件）见 **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**。
+
+### 随本仓库分发的
+
+| 组件 | 版本 | 许可 | 用在哪 |
+|---|---|---|---|
+| **cuefs 自有代码**（`app/`、`tools/`、`docker/`、`docs/`） | 1.5.0 | **MIT** | 全部功能 |
+| **CPython embeddable**（`winepy/`） | 3.12.8 | **PSF-2.0** | Wine 里跑的 Python；`winepy/LICENSE.txt` 原样保留 |
+| OpenSSL 运行库（`libcrypto-3.dll` / `libssl-3.dll`） | 3.x | **Apache-2.0** | CPython 的 `ssl`/`hashlib` 依赖 |
+| libffi（`libffi-8.dll`） | 3.4 | **MIT** | CPython 的 `ctypes` 依赖 |
+| SQLite（`sqlite3.dll`） | 3.x | **公有领域** | CPython 标准库 |
+| MSVC 运行库（`vcruntime140.dll` / `vcruntime140_1.dll`） | 14.x | **Microsoft 可再分发组件**（随 VS 再分发许可） | CPython 的 C 运行时 |
+| 示例音频（`sample/`，4 首） | — | **CC0 1.0**（公有领域） | 冒烟测试用的整盘 + CUE；来源署名见 [sample/CREDITS.md](sample/CREDITS.md) |
+| 示例封面（`sample/cover.jpg`） | — | **CC0 1.0** | 同上；由 `sample/make_cover.py` 生成 |
+
+### 只随**镜像**分发（不随仓库）
+
+| 组件 | 许可 | 说明 |
+|---|---|---|
+| **ffmpeg / ffprobe**（静态构建，johnvansickle.com） | **GPLv3**（该静态构建启用了 `--enable-gpl`） | 镜像里的 `/usr/local/bin/ffmpeg`；**源码可从构建站获取**，本仓库不分发二进制 |
+| Debian `trixie-slim` 基础镜像 | 各包各自许可（多数 GPL/LGPL/BSD/MIT） | apt 只装 `python3 ca-certificates curl xz-utils`（完整版另加 `wine64`） |
+| **Wine**（`wine64`，Debian 包） | **LGPL-2.1+**（含若干 MIT/BSD 组件） | 只在完整版镜像里；用来跑官方的 32 位 TAK 解码 DLL |
+| Python 3（Debian 包，宿主侧） | PSF-2.0 | 运行 `app/cuefs.py` |
+
+### **不**分发、必须你自己取得
+
+| 组件 | 许可 | 说明 |
+|---|---|---|
+| **TAK 解码库**（Thomas Becker 的 TAK 2.3.3 SDK，`tak_deco_lib.dll`） | **freeware，仅限私人非商业使用**；分发必须保持原包完整，不得拆分/修改 | 不是开源软件。**不在仓库、也不在镜像里**；由你从 <https://www.tak-audio.com/> 下载 `tak233.zip` 后自行导入（[docs/02-TAK-LICENSE.md](docs/02-TAK-LICENSE.md)） |
+| Jellyfin 服务端 | **GPLv2** | 本项目的使用方，不由本项目分发 |
+| rclone | **MIT** | 推荐的 WebDAV 客户端，不由本项目分发 |
+| davfs2 | **GPLv3** | 可选的 WebDAV 挂载方式，不由本项目分发 |
+
+### 只在开发/构建时才用到的
+
+| 组件 | 许可 | 用在哪 |
+|---|---|---|
+| Pillow | **MIT-CMU（HPND）** | 仅 `sample/make_cover.py` 生成示例封面，运行时不依赖 |
+| Liberation Sans（`/usr/share/fonts/...`） | **SIL OFL 1.1** | 同上，字体文件不随仓库分发，运行时不需要 |
+| GitHub Actions：`actions/checkout@v4`、`actions/setup-python@v5` | **MIT** | `.github/workflows/ci.yml` |
+| Dockerfile 前端 `docker/dockerfile:1` | **Apache-2.0** | 两个 Dockerfile 的 `# syntax=` 行 |
+
+### 一句话总结
+
+- **本仓库的代码是 MIT**，可以自由使用、修改、商用（MIT 部分）。
+- **ffmpeg 是 GPLv3**：你在分发**镜像**（而不是源码）时要一并满足 GPLv3 的源码提供义务；
+  只用本项目、不对外分发镜像则不受影响。
+- **TAK 解码库不是开源软件**：只授权私人非商业用途，且必须原包分发。商业使用请自行联系 Thomas Becker。
+- 任何组件出问题，请先看 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 里对应条目；
+  需要替换某个组件（比如换非 GPL 的 ffmpeg 构建）时，改动点只有 `docker/Dockerfile*` 的那一行 `curl`。
+
+## 来源与致谢
+
+- 作者：**setsuna-kitahara & DeepSeek**。
+- 示例音频：Library of Congress「Citizen DJ / FMA」公有领域子集（Monplaisir、Komiku），
+  逐条署名见 [sample/CREDITS.md](sample/CREDITS.md)。
+- TAK 解码库（`tak_deco_lib.dll`）版权归 **Thomas Becker**，按其 freeware 条款使用。
