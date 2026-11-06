@@ -112,7 +112,8 @@ docker run --rm \
   cuefs:latest --export /export
 ```
 
-结果：`/export/<专辑名>/01 - 曲名.flac` …，就是普通 FLAC 目录，Jellyfin 直接指过去即可。
+结果：`/export/Public Domain Sampler/01 - A Good Start.flac` 这种普通 FLAC 目录（名字跟 WebDAV 里完全一样，
+都来自 CUE 的 `TITLE`，规则见 [14-NAMING.md](14-NAMING.md)），Jellyfin 直接指过去即可。
 适合：**库很小**、或者你的 Jellyfin 跑在没法装 FUSE 的地方（比如某些 NAS 的套件版）。
 
 ## Jellyfin 侧设置
@@ -125,15 +126,30 @@ docker run --rm \
    - 「优先使用内嵌元数据」可以留着
 4. 保存 → 扫描
 
+### 库里的专辑名和曲目名从哪来
+
+扫完之后 Jellyfin 里看到的**专辑名就是 CUE 顶层的 `TITLE`**，**曲目名就是每轨的 `TITLE`**
+（不是目录名、也不是文件名拼出来的）。所以：
+
+- CUE 里 `TITLE "Public Domain Sampler"` → 库里一张叫 `Public Domain Sampler` 的专辑；
+- CUE 里没写 `TITLE` → 目录名退化成 CUE 文件名，标签是空的（Jellyfin 会自己去猜/抓）；
+- 目录名会被清掉 `\ / : * ? " < > |` 这些字符，而标签保留原文，所以**目录名和显示名可以不一样**；
+- 两张盘的 `TITLE` + `PERFORMER` 完全相同时，Jellyfin 可能把它们**并成一张专辑**（曲目翻倍）。
+
+完整规则、重名处理、改名的四种办法、多碟怎么排：[14-NAMING.md](14-NAMING.md)。
+
 ### 关于 NFO 写回
 
 Jellyfin 扫库/编辑元数据时会往专辑目录写 `album.nfo`、`folder.jpg`。
 在 cuefs 里，这些写入**自动重定向到目录 B（overlay）**：
 
 ```
-GET  /专辑/album.nfo   → 先看 B，没有再回 A（取决于 --sidecar）
-PUT  /专辑/album.nfo   → 只写 B（A 永远只读）
+GET  /<专辑名>/album.nfo   → 先看 B，没有再回 A（取决于 --sidecar）
+PUT  /<专辑名>/album.nfo   → 只写 B（A 永远只读）
 ```
+
+`<专辑名>` 就是 CUE 顶层 `TITLE` 清洗后的目录名（例：`Public Domain Sampler`），
+所以 B 里的目录名必须跟 WebDAV 里看到的一模一样，见 [14-NAMING.md](14-NAMING.md)。
 
 所以：
 
@@ -152,3 +168,5 @@ PUT  /专辑/album.nfo   → 只写 B（A 永远只读）
 | 扫库特别慢 | 关「实时监控」；`--dir-cache-time` 调大；把 `/cache` 放 SSD |
 | 播放几秒后卡住 | rclone 的 `--vfs-cache-mode` 别开 `full`；确认 cuefs 的 `Range` 返回 206 |
 | 封面不显示 | 侧车没放对位置，见 [05-SIDECAR.md](05-SIDECAR.md) |
+| 专辑名跟我以为的不一样 | 库里显示的是 CUE 的 `TITLE`（原文），目录名是它清洗后的版本，见 [14-NAMING.md](14-NAMING.md) |
+| 曲目翻倍 / 两张专辑并成一张 | 两张盘的 `TITLE` + `PERFORMER` 相同，Jellyfin 按标签归并；给 TITLE 加区分或改 `album.nfo` 的 `<title>`，见 [14-NAMING.md](14-NAMING.md) 第三节 |

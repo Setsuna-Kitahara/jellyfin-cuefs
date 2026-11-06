@@ -24,11 +24,14 @@ OVERLAY = sys.argv[2] if len(sys.argv) > 2 else '/tmp/cuefs-overlay'
 FFMPEG = os.environ.get('FFMPEG', 'ffmpeg')
 
 EXPECT = {
-    # 专辑名 -> (轨数, 整盘 PCM MD5, 字节数)
-    'ef - a tale of melodies. ORIGINAL SOUNDTRACK ～elegia～': (
-        25, 'c14fd3763fdbf2647662023c74a2a782', 521320800),
-    'ef - a tale of melodies. O.S.T 2 ～felice～': (
-        35, 'd7ec4180a09dd3ad7b9ad8be87ab82a3', 683928672),
+    # 专辑名 -> (轨数, 整盘 PCM MD5, 字节数)。名字就是 WebDAV 里看到的目录名，
+    # 即 CUE 顶层 TITLE 清洗后的版本（见 docs/14-NAMING.md）。
+    # 内置的是仓库自带示例盘；换成你自己的盘时，用整盘解码一遍算 MD5/字节数：
+    #   ffmpeg -v error -i /music-src/x.tak -f s16le -ac 2 -ar 44100 - | tee /dev/null |
+    #     wc -c   # 字节数
+    #   ffmpeg -v error -i /music-src/x.tak -f s16le -ac 2 -ar 44100 - | md5sum
+    'Public Domain Sampler': (
+        4, 'b60b2241a04671e145bc689f94ef4891', 64549192),
 }
 NS = {'D': 'DAV:'}
 

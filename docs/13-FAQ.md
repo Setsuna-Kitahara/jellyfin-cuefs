@@ -24,6 +24,16 @@ A：默认不会自动清（`CUEFS_CACHE_TTL=0`）。建议至少设一个：`CU
 A：可以。cuefs 只是按样本位置切片，位深/采样率跟着源文件走，不做重采样。
 TAK 那条路径目前按 16bit/44.1k 的常见情形验证得最充分；24bit 的 TAK 建议先用 `--list` + 单轨试听确认。
 
+**Q：Jellyfin 里那个专辑名/曲目名是哪来的？我能改吗？**
+A：专辑名 = CUE 顶层 `TITLE`，曲目名 = 每轨 `TITLE`，目录名是它们清掉 `/ \ : * ? " < > |`
+之后的版本；两者可以不一样。想改名字有四种办法（改 CUE / 改 `meta.json` 的 `album` / 写
+`album.nfo` / 改完清缓存），完整规则见 [14-NAMING.md](14-NAMING.md)。
+
+**Q：为什么我库里同一张专辑出现两次，曲目还翻倍了？**
+A：两张盘的 `TITLE` + `PERFORMER` 完全相同，Jellyfin 按 `album`/`album_artist` 标签归并成了一张。
+给 CUE 的 `TITLE` 加上能区分的部分（比如 `Public Domain Sampler (Disc 2)`），或者用 `meta.json`
+/ `album.nfo` 改标签，然后清缓存、在 Jellyfin 里删掉重复那张重新扫描。见 [14-NAMING.md](14-NAMING.md)。
+
 **Q：多个 CUE 放在同一个目录里会串吗？**
 A：不会。目录级侧车（`cover.jpg` 与 CUE 同目录）只在“该目录只有 1 个 CUE”时才启用，
 多盘同目录时请用子目录或 `<cue 文件名>.jpg` 前缀式（见 [05-SIDECAR.md](05-SIDECAR.md)）。

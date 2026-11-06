@@ -1,6 +1,6 @@
 # 发布到 GitHub 的检查清单
 
-> 目标：把 `_cuefs/repo/` 这个目录推上去，别人 `git clone` + `docker build` 就能用。
+> 目标：把这个仓库推上去，别人 `git clone` + `docker build` 就能用。
 
 ## 0. 先自检：不该进仓库的东西
 
@@ -17,7 +17,7 @@ git check-ignore -v tak233.zip sample/sample-disc/sample-disc.tak test/src/*.tak
 ## 1. 建仓库
 
 ```bash
-cd _cuefs/repo
+cd jellyfin-cuefs
 git init -b main
 git add -A
 git commit -m "cuefs: expose TAK/CUE disc images to Jellyfin over WebDAV"

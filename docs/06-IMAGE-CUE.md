@@ -20,7 +20,7 @@ cuefs 的切片逻辑与编码无关：**按 CUE 算出每轨的采样区间，�
 - `exact_duration()` 用 `stream.duration_ts × time_base` 取精确样本数；
 - WAV 仍优先用 RIFF 头直接算（`wav_duration`）。
 
-## 实测矩阵（GNCA-1165，25 轨，43.5 分钟）
+## 实测矩阵（一张 25 轨、43.5 分钟的真实专辑）
 
 同一段 PCM 分别封装成不同「整盘」格式，各跑一遍 `--export`，把所有轨解码后拼接求 MD5：
 
@@ -39,9 +39,9 @@ cuefs 的切片逻辑与编码无关：**按 CUE 算出每轨的采样区间，�
 ## CUE 里怎么写
 
 ```cue
-FILE "GNCA-1165.flac" WAVE      ← 扩展名换成 .wv / .tta / .m4a / .ape 都行
+FILE "sample-disc.flac" WAVE    ← 扩展名换成 .wv / .tta / .m4a / .ape 都行
   TRACK 01 AUDIO
-    TITLE "Overture"
+    TITLE "A Good Start"   ← 这行就是曲目名（见 docs/14-NAMING.md）
     INDEX 01 00:00:00
 ```
 
@@ -54,7 +54,7 @@ ffmpeg 的 `-ss` 是「输入 seek + 精度丢弃」，对无损音频是采样�
 
 ## 走 WebDAV 也一致（不只是 --export）
 
-同一张 FLAC+CUE 盘（GNCA-1165），用 WebDAV **逐轨 HTTP GET** 下来再解码拼接：
+同一张 FLAC+CUE 盘，用 WebDAV **逐轨 HTTP GET** 下来再解码拼接：
 
 ```
 tracks=25  pcm_bytes=521,320,800  md5=c14fd3763fdbf2647662023c74a2a782   ← 与整盘 PCM 完全相同

@@ -72,15 +72,27 @@ Jellyfin 跑在容器里的话，看 [04-JELLYFIN.md](04-JELLYFIN.md) 的「容�
 
 ## 5. 验证一切正常（可选）
 
+下面用仓库自带的示例盘举例：CUE 里的 `TITLE "Public Domain Sampler"` 就是**专辑名**，
+第 1 轨的 `TITLE "A Good Start"` 就是**曲目名**（所以路径里是 `01 - A Good Start.flac`）。
+换你自己的盘时，把 URL 里这两段换成你 CUE 里写的名字即可 —— 规则见
+[14-NAMING.md](14-NAMING.md)，中文/空格要 percent-encode。
+
 ```bash
 curl -s -o /dev/null -w '%{http_code} %{size_download}\n' \
-  "http://127.0.0.1:8099/专辑名/01%20-%20曲名.flac"
+  "http://127.0.0.1:8099/Public%20Domain%20Sampler/01%20-%20A%20Good%20Start.flac"
 # 200 + 文件大小
 
 curl -s -H 'Range: bytes=0-4095' -D- -o /dev/null \
-  "http://127.0.0.1:8099/专辑名/01%20-%20曲名.flac" | head -5
+  "http://127.0.0.1:8099/Public%20Domain%20Sampler/01%20-%20A%20Good%20Start.flac" | head -5
 # HTTP/1.1 206 Partial Content
 # Content-Range: bytes 0-4095/…
+```
+
+不确定目录名到底叫什么？直接列出来：
+
+```bash
+curl -s http://127.0.0.1:8099/ | grep -o 'href="[^"]*"'   # 根目录：所有专辑
+curl -s "http://127.0.0.1:8099/Public%20Domain%20Sampler/" | grep -o 'href="[^"]*"'  # 一张专辑的全部轨
 ```
 
 更完整的冒烟测试（含缓存、缓外效率、位级一致性）见 [08-SAMPLE-TEST.md](08-SAMPLE-TEST.md)。

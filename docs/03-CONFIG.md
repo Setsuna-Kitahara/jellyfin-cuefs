@@ -25,9 +25,9 @@
 | `--auth` | `CUEFS_AUTH` | 空 | Basic 认证 `user:password`；空=不认证 |
 | `--keep-wav` | `CUEFS_KEEP_WAV=1` | 关 | `tak-mode=wav` 时保留整盘 WAV（默认用完就删） |
 | `--ffmpeg` / `--ffprobe` | `FFMPEG` / `FFPROBE` | `ffmpeg` / `ffprobe` | 外部二进制路径 |
-| `--list` | — | — | 打印解析结果（专辑/轨道/时长）后退出，用来查 CUE 有没有解析对 |
+| `--list` | — | — | 打印解析结果（专辑名 / 轨数 / 源文件）后退出，用来查 CUE 有没有解析对 |
 | `--prefetch` | — | 空 | `all`：启动时把**所有**轨都生成一遍（预热；对小库还行，大库别用） |
-| `--export` | — | 空 | 把缓存里的轨复制成真实目录 `DIR/专辑/NN - 曲名.flac` 后退出（静态方案用） |
+| `--export` | — | 空 | 把缓存里的轨复制成真实目录 `DIR/<专辑名>/NN - 曲名.flac` 后退出（静态方案用）。`<专辑名>`/`曲名` 与 WebDAV 里的完全一致，见 [14-NAMING.md](14-NAMING.md) |
 
 ## 环境变量里没有的（只能用 CLI 的场景）
 
@@ -82,10 +82,14 @@ docker run -d --name cuefs --restart unless-stopped \
 ## 缓存机制
 
 - 路径：`/cache/<sha1(绝对路径 of .cue) 前 12 位>/NN.flac`
+- **缓存键只跟 CUE 的路径有关**，跟 CUE 内容无关：改了 CUE 的 `TITLE`、或者改了 `meta.json`
+  的标签，缓存里的 FLAC 还是旧的（标签是切片那一刻烧进去的）。要么清缓存，要么等 TTL 过期
 - 只有 Jellyfin 真去读某一轨时才生成；`PROPFIND` 不生成（`--prefetch` 除外）
 - 命中时刷新 mtime（所以“常听的留着、不听的过期”）
 - TTL 清理：后台线程每 `max(30s, min(600s, ttl*1800s))` 扫一次；`--cache-max-gb` 另外按 LRU 删
-- 想立刻清空：`docker exec cuefs sh -c 'rm -rf /cache/*'`（只影响缓存，不碰 A/B）
+- 想立刻清空：`docker exec cuefs sh -c 'rm -rf /cache/*'`（只影响缓存，不碰 A/B）；
+  想只清某一张：`ls /cache` 找到那 12 位哈希再删那一个子目录。改名相关的完整说明见
+  [14-NAMING.md](14-NAMING.md) 第四节
 
 ## 验证配置是否生效
 

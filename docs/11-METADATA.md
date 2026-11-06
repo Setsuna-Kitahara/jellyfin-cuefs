@@ -8,7 +8,7 @@
 
 1. **内嵌标签**（FLAC 的 Vorbis comments、MP3 的 ID3）—— 优先级最高
 2. **`album.nfo` / `artist.nfo` / `*.nfo`** —— 补充或覆盖专辑/艺人级信息
-3. **文件夹/文件名**（`NN - 曲名`、`[YYYY-MM-DD][专辑名]`）
+3. **文件夹/文件名**（cuefs 生成的是 `<专辑名>/NN - <曲名>.flac`，`NN` = CUE 的 `TRACK` 号，见 [14-NAMING.md](14-NAMING.md)）
 4. **在线抓取**（MusicBrainz / TheAudioDB，默认开）
 
 注意 1 和 2 的关系：**Jellyfin 对专辑级字段（标题/年份/厂牌/简介/风格）以 NFO 为准；
@@ -24,7 +24,7 @@
 | `<year>` / `<premiered>` / `<releasedate>` | 年份 / 首发日 / 发行日 |
 | `<genre>` | 风格（可多个） |
 | `<label>` | 厂牌 |
-| `<catalognumber>` | 目录号（就是 `GNCA-1165` 这种） |
+| `<catalognumber>` | 目录号（CD 封套/碟片上印的那串，如 `PD-SAMPLE-001`） |
 | `<type>` | Album / EP / Single / Soundtrack |
 | `<review>` / `<outline>` | 长简介 / 一句话 |
 | `<lockdata>true</lockdata>` | 锁定，防止 Jellyfin 联网覆盖 |
@@ -49,29 +49,33 @@
 cuefs 切片时会把 CUE 里的信息写成 FLAC 标签：
 
 ```
-title          01 - Overture 里的 "Overture"
+title          该轨 TITLE；没写就是 Track NN
 artist         该轨 PERFORMER（没有就用专辑 PERFORMER）
-album          TITLE
+album          CUE 顶层 TITLE 原文   ← 这就是媒体库里显示的专辑名
 album_artist   专辑 PERFORMER
-track          NN
+track          TRACK 号（两位）
 date           REM DATE
 genre          REM GENRE
 ```
+
+文件名和标签用的是同一批字段，但**目录/文件名是清洗过的，标签是原文**：
+`TITLE "A/B: Test?"` → 目录 `A_B_ Test_`、标签里仍是 `A/B: Test?`。清洗规则见
+[14-NAMING.md](14-NAMING.md)。
 
 CUE 表达不了的字段，放一个 `meta.json` 在专辑目录里（A 或 B 均可，优先 B）：
 
 ```json
 {
   "album": {
-    "label": "Geneon Entertainment",
-    "catalognumber": "GNCA-1165",
-    "comment": "ef - a tale of melodies. ORIGINAL SOUNDTRACK ～elegia～",
-    "copyright": "(C) 2008 Geneon",
-    "genre": "Soundtrack"
+    "label": "Library of Congress",
+    "catalognumber": "PD-SAMPLE-001",
+    "comment": "CC0 sample disc bundled with the repo",
+    "copyright": "CC0 1.0",
+    "genre": "Test"
   },
   "tracks": {
-    "2": { "composer": "天門", "comment": "https://example.com/source/2" },
-    "7": { "composer": "柳英一朗", "isrc": "JPXX00800123" }
+    "1": { "composer": "Monplaisir", "comment": "https://example.com/source/1" },
+    "3": { "composer": "Komiku", "isrc": "ZZZZZ0000003" }
   }
 }
 ```
@@ -100,8 +104,8 @@ Jellyfin 扫库时会把它当作封面。侧车位置规则见 [05-SIDECAR.md](
 （`/Audio/{id}/Lyrics` 接口可验证）。所以命名规则：
 
 ```
-01 - Overture.flac
-01 - Overture.lrc      ← 同名
+01 - A Good Start.flac
+01 - A Good Start.lrc      ← 同名（`NN - <曲名>` 都来自 CUE，规则见 14-NAMING）
 ```
 
 双语歌词的写法（同时间戳两行，翻译在上、原文在下）：

@@ -131,7 +131,7 @@ RESULT: PASS
 ```
 
 > 这组数字是 `sample_disc.wav` 解码出来的 PCM 摘要；`sample-disc.tak` 就是由它编码而来。
-> 仓库里的 `tools/verify_container.py` 对真实盘（GNCA-1135/1136/1165/1166）也算过同样的比对。
+> 同样的比对在几张真实 TAK 整盘（25–35 轨）上也跑过，`RESULT: PASS`。
 
 ## 6. 一键脚本
 
