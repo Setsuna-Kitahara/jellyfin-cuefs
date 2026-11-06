@@ -22,11 +22,16 @@ jobs:
           python - <<'PY'
           import sys; sys.path.insert(0, 'app')
           import cuefs
-          # INDEX 00/01 -> 帧精确
-          assert cuefs.cue_time(0) == '00:00:00'
-          assert cuefs.cue_time(4578) == '01:01:03'   # 1:01.04 -> mm:ss:ff
-          # 路径安全化
-          assert '/' not in cuefs.safe_name('a/b:c*?')
+          # mm:ss:ff（75 帧/秒）-> 秒，需帧精确：3 帧 = 3/75 = 0.04 s
+          assert cuefs.cue_time('00:00:00') == 0.0
+          assert abs(cuefs.cue_time('01:01:03') - 61.04) < 1e-9
+          assert cuefs.cue_time('00:00:75') == 1.0      # 75 帧 = 1 秒
+          assert cuefs.cue_time('') == 0.0 and cuefs.cue_time(None) == 0.0
+          # 路径安全化：分隔符/通配符全部折叠成下划线
+          n = cuefs.safe_name('a/b:c*?')
+          assert '/' not in n and n == 'a_b_c_', n
+          assert cuefs.safe_name('') == 'untitled'
+          assert cuefs.safe_name('...') == 'untitled'
           print('ok')
           PY
 
