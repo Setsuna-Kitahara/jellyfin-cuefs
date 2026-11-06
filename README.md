@@ -16,6 +16,9 @@
   配置生成器 <https://setsuna-kitahara.github.io/jellyfin-cuefs/configurator.html>
 - **镜像**：`ghcr.io/setsuna-kitahara/cuefs:latest` / `:slim`（打 `v*` 标签时自动构建推送，见 [PUBLISH.md](PUBLISH.md)）
 
+> **版本说明**：`v1.5.0` 是**首个公开发布的版本**；1.0–1.4 属于内部迭代，没有对外发布过。
+> 作者：Setsuna-Kitahara 与 DeepSeek Harness。
+
 > 英文简介：cuefs exposes "disc image + CUE" albums (TAK, FLAC, WavPack, TTA, ALAC, AIFF, WAV, APE…) as a
 > read-only WebDAV tree of virtual tracks, so Jellyfin can index and stream them **without transcoding
 > the original disc**. The source directory is never modified; Jellyfin's writes (NFO, artwork) are
