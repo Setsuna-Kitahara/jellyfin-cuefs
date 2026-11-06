@@ -34,6 +34,7 @@
       padding:4px 10px;cursor:pointer;font-size:12px}
   .copy:hover{color:var(--acc);border-color:var(--acc)}
   .warn{border-left:3px solid #e0a23c;background:#2a2110;color:#f0d9a8;padding:8px 12px;border-radius:8px;font-size:13px;margin:10px 0}
+  .tip{border-left:3px solid #3f7f5f;background:#16241c;color:#bfe0cd;padding:8px 12px;border-radius:8px;font-size:13px;margin:10px 0}
   .hint{color:var(--muted);font-size:12.5px;margin-top:6px}
   footer{max-width:1100px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:12.5px}
   code.k{background:#0a0f11;padding:1px 5px;border-radius:5px;color:#9fe6c8;font-size:12.5px}
@@ -50,10 +51,11 @@
     <h2>1. 选镜像</h2>
     <label>版本</label>
     <select id="image">
-      <option value="cuefs:latest">完整版 cuefs:latest —— 可解 TAK（amd64，1.53 GB）</option>
-      <option value="cuefs:slim">精简版 cuefs:slim —— 无 TAK，支持 arm64（408 MB）</option>
+      <option value="ghcr.io/setsuna-kitahara/cuefs:latest">完整版 cuefs:latest —— 可解 TAK（amd64，1.53 GB）</option>
+      <option value="ghcr.io/setsuna-kitahara/cuefs:slim">精简版 cuefs:slim —— 无 TAK，支持 arm64（408 MB）</option>
     </select>
     <div id="takWarn" class="warn">完整版镜像<b>不自带</b> TAK 解码库：装好后需要你自己下载 tak233.zip 并导入（个人/非商业用途）。</div>
+    <div class="tip">官方镜像在 GHCR 与 Docker Hub 各有一份、内容相同、<b>匿名可拉</b>；Docker Hub 上把 <code class="k">ghcr.io/setsuna-kitahara/cuefs</code> 换成 <code class="k">kitaharasetsuna/cuefs</code> 即可。</div>
 
     <label>目录 A（只读，你的整盘 CUE/TAK 所在）</label>
     <input type="text" id="src" value="/mnt/music-src">

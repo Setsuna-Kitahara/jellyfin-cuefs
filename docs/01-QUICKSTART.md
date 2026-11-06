@@ -2,6 +2,11 @@
 
 目标：**15 分钟内**在 Jellyfin 里听到一首来自 TAK 整盘的歌。
 
+> 下文用 `cuefs:latest` / `cuefs:slim` 代指官方镜像。完整写法是
+> `ghcr.io/setsuna-kitahara/cuefs:latest`、`ghcr.io/setsuna-kitahara/cuefs:slim`
+> （Docker Hub 上是 `kitaharasetsuna/cuefs:latest` / `:slim`，内容相同，两边都**匿名可拉**）。
+> 复制命令时记得换成完整写法。
+
 ## 0. 先确认你要哪种
 
 | | 完整版 `cuefs:latest` | 精简版 `cuefs:slim` |

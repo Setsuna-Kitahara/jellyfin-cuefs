@@ -10,11 +10,13 @@
 - 前端是 **WebDAV**：Jellyfin 侧用 rclone / davfs2 挂上来，库路径照常填。
 - 原盘目录 **只读**；Jellyfin 想写 NFO / 封面时，**重定向**到另一个可写目录（overlay）。
 - 支持 **TAK**（需要官方的闭源解码库 + Wine），也支持 **FLAC / WavPack / TTA / ALAC / AIFF / WAV / APE / MPC / Shorten** 等 ffmpeg 能解的整盘格式。
-- 两个镜像：`cuefs:latest`（完整版，含 Wine，可解 TAK，**amd64**）和 `cuefs:slim`（精简版，408 MB，**amd64 + arm64**）。
+- 两个官方镜像，**匿名可拉**（不用登录）：`cuefs:latest`（完整版，含 Wine，可解 TAK，**amd64**；压缩约 363 MB，解开 1.53 GB）
+  / `cuefs:slim`（精简版，无 TAK，**amd64 + arm64**；压缩约 103 MB，解开 408 MB）。
 - **在线文档**（每次改 `docs/` 由 GitHub Actions 自动渲染后发布）：
   <https://setsuna-kitahara.github.io/jellyfin-cuefs/> ·
   配置生成器 <https://setsuna-kitahara.github.io/jellyfin-cuefs/configurator.html>
-- **镜像**：`ghcr.io/setsuna-kitahara/cuefs:latest` / `:slim`（打 `v*` 标签时自动构建推送，见 [PUBLISH.md](PUBLISH.md)）
+- **镜像**：`ghcr.io/setsuna-kitahara/cuefs:latest`、`docker.io/kitaharasetsuna/cuefs:latest`（`:slim` 同上）；
+  打 `v*` 标签时由 Actions 自动构建推送，见 [PUBLISH.md](PUBLISH.md)
 
 > **版本说明**：`v1.5.0` 是**首个公开发布的版本**；1.0–1.4 属于内部迭代，没有对外发布过。
 > 作者：Setsuna-Kitahara 与 DeepSeek Harness。
@@ -92,15 +94,23 @@ FILE "sample-disc.tak" WAVE
 
 ## 快速开始
 
-> 下面的 `cuefs:latest` 只是占位；发布到自己的仓库后换成 `ghcr.io/<你>/jellyfin-cuefs:latest`。
-> 想少写命令？打开 **[配置生成器](docs/configurator/index.html)**（纯前端，本地双击即可），
+官方镜像已经发布到两个仓库，**内容相同、匿名可拉**（不需要 `docker login`）：
+
+| 从哪里拉 | 完整版（含 TAK 解码，amd64） | 精简版（无 TAK，amd64 + arm64） |
+|---|---|---|
+| GHCR | `ghcr.io/setsuna-kitahara/cuefs:latest` | `ghcr.io/setsuna-kitahara/cuefs:slim` |
+| Docker Hub | `kitaharasetsuna/cuefs:latest` | `kitaharasetsuna/cuefs:slim` |
+
+版本标签另有 `:1.5.0` 与 `:1.5.0-slim`。想自己构建就 `make full` / `make slim`（见 [Makefile](Makefile)）。
+
+> 想少写命令？打开 **[配置生成器](https://setsuna-kitahara.github.io/jellyfin-cuefs/configurator.html)**（纯前端），
 > 选完直接复制 `docker run` / `compose` / 安装步骤 / Jellyfin 挂载 / 卸载命令。
 
 ### 1) 完整版（要 TAK）
 
 ```bash
 # 拉镜像（不写 tag 就是 latest = 完整版）
-docker pull cuefs:latest
+docker pull ghcr.io/setsuna-kitahara/cuefs:latest
 
 # 起服务：A 只读挂进去，B 可写；端口只绑本机回环
 docker run -d --name cuefs --restart unless-stopped \
@@ -108,7 +118,7 @@ docker run -d --name cuefs --restart unless-stopped \
   -v /mnt/music-src:/music-src:ro \
   -v /mnt/music-overlay:/music-overlay \
   -v cuefs-cache:/cache \
-  cuefs:latest
+  ghcr.io/setsuna-kitahara/cuefs:latest
 ```
 
 **完整版第一次启动还不能解 TAK** —— 解码库是第三方 freeware，不能随镜像分发，需要你自己下载、自己导入：
@@ -124,13 +134,13 @@ docker exec cuefs python3 /app/import_tak.py --status   # 应显示 INSTALLED
 ### 2) 精简版（不要 TAK，能跑 arm64）
 
 ```bash
-docker pull cuefs:slim
+docker pull ghcr.io/setsuna-kitahara/cuefs:slim
 docker run -d --name cuefs --restart unless-stopped \
   -p 127.0.0.1:8099:8099 \
   -v /mnt/music-src:/music-src:ro \
   -v /mnt/music-overlay:/music-overlay \
   -v cuefs-cache:/cache \
-  cuefs:slim
+  ghcr.io/setsuna-kitahara/cuefs:slim
 ```
 
 精简版没有 Wine，**解不了 TAK**，但 FLAC / WavPack / TTA / ALAC / AIFF / WAV / APE / MPC 的「整盘+CUE」全都能用。
@@ -165,7 +175,7 @@ rclone mount cuefs: /mnt/jellyfin-cuefs --allow-other --vfs-cache-mode off --dae
 仓库里带了一套**公有领域**的示例整盘（TAK + CUE + NFO + SAMPLE 封面），直接拿来验流程：
 
 ```bash
-git clone <this repo> && cd cuefs
+git clone https://github.com/Setsuna-Kitahara/jellyfin-cuefs.git && cd jellyfin-cuefs
 docker compose -f docker-compose.sample.yml up -d   # 或按 docs/08-SAMPLE-TEST.md 手动跑
 curl -s http://127.0.0.1:8099/ | head
 ```
@@ -250,7 +260,7 @@ curl -s http://127.0.0.1:8099/ | head
 
 ## 来源与致谢
 
-- 作者：**setsuna-kitahara & DeepSeek**。
+- 作者：**Setsuna-Kitahara 与 DeepSeek Harness**。
 - 示例音频：Library of Congress「Citizen DJ / FMA」公有领域子集（Monplaisir、Komiku），
   逐条署名见 [sample/CREDITS.md](sample/CREDITS.md)。
 - TAK 解码库（`tak_deco_lib.dll`）版权归 **Thomas Becker**，按其 freeware 条款使用。
