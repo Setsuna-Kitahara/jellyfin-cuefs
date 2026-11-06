@@ -30,7 +30,12 @@ RUN set -eux; \
     fi; \
     apt-get update; \
     apt-get install -y --no-install-recommends python3 ca-certificates curl xz-utils wine64; \
-    curl -fsSL "$FFMPEG_URL" -o /tmp/ff.tar.xz; \
+    for i in 1 2 3 4 5; do \
+      curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 \
+        "$FFMPEG_URL" -o /tmp/ff.tar.xz && break; \
+      echo "ffmpeg 下载失败（第 $i 次），10 秒后重试"; sleep 10; \
+    done; \
+    test -s /tmp/ff.tar.xz; \
     mkdir -p /tmp/ff; tar -xJf /tmp/ff.tar.xz -C /tmp/ff --strip-components=1; \
     install -m 0755 /tmp/ff/ffmpeg /usr/local/bin/ffmpeg; \
     install -m 0755 /tmp/ff/ffprobe /usr/local/bin/ffprobe; \

@@ -29,7 +29,12 @@ RUN set -eux; \
       arm64) A=arm64 ;; \
       *) echo "unsupported arch: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
-    curl -fsSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$A-static.tar.xz" -o /tmp/ff.tar.xz; \
+    for i in 1 2 3 4 5; do \
+      curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 \
+        "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$A-static.tar.xz" -o /tmp/ff.tar.xz && break; \
+      echo "ffmpeg 下载失败（第 $i 次），10 秒后重试"; sleep 10; \
+    done; \
+    test -s /tmp/ff.tar.xz; \
     mkdir -p /tmp/ff; tar -xJf /tmp/ff.tar.xz -C /tmp/ff --strip-components=1; \
     install -m 0755 /tmp/ff/ffmpeg /usr/local/bin/ffmpeg; \
     install -m 0755 /tmp/ff/ffprobe /usr/local/bin/ffprobe; \
